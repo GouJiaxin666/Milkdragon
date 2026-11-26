@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>老实查表，很枯燥吧</title>
+<style>
+  :root{
+    --paper:#f7f5f0;
+    --card:#fffdf8;
+    --ink:#16242e;
+    --muted:#6b7a83;
+    --line:#e2dccf;
+    --line-soft:#eee8dc;
+    --accent:#0d5c63;
+    --accent-2:#127d86;
+    --ember:#c2410c;
+    --mono:"Cascadia Mono","JetBrains Mono",Consolas,"SFMono-Regular",Menlo,monospace;
+    --serif:"Songti SC","STSong","Noto Serif SC",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 620px at 10% -12%, #e8f2f1 0%, rgba(232,242,241,0) 62%),
+      radial-gradient(900px 520px at 104% -4%, #f4ebdd 0%, rgba(244,235,221,0) 58%),
+      var(--paper);
+    color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  [hidden]{display:none!important}
+
+  .shell{max-width:1240px;margin:0 auto;padding:0 26px 56px}
+
+  header{padding:46px 2px 26px}
+  .eyebrow{
+    display:inline-block;font-size:11.5px;letter-spacing:.22em;color:var(--accent);
+    text-transform:uppercase;margin-bottom:14px;font-weight:600;
+  }
+  h1{
+    font-family:var(--serif);font-weight:600;letter-spacing:.02em;
+    font-size:clamp(26px,3.6vw,40px);line-height:1.25;margin:0 0 12px;
+  }
+  .sub{color:var(--muted);font-size:14.5px;line-height:1.8;max-width:70ch;margin:0}
+  .sub .poetic{color:#8a979e;font-family:var(--serif)}
+
+  .layout{display:grid;grid-template-columns:392px minmax(0,1fr);gap:22px;align-items:start}
+  @media (max-width:1020px){ .layout{grid-template-columns:1fr} }
+
+  .panel{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 1px 2px rgba(22,36,46,.04),0 20px 40px -30px rgba(22,36,46,.5);
+  }
+  .inputs{padding:22px 22px 24px}
+  .right{display:flex;flex-direction:column;gap:22px;min-width:0}
+
+  .seg{display:flex;background:#efeae0;border-radius:11px;padding:4px;gap:4px;margin-bottom:20px}
+  .seg label{flex:1;min-width:0}
+  .seg input{position:absolute;opacity:0;pointer-events:none}
+  .seg span{
+    display:block;text-align:center;padding:9px 6px;border-radius:8px;font-size:13px;
+    color:var(--muted);cursor:pointer;transition:.18s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .seg input:checked + span{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(22,36,46,.12)}
+  .seg input:focus-visible + span{outline:2px solid var(--accent-2);outline-offset:1px}
+
+  .field{margin-bottom:15px;transition:opacity .18s}
+  .field.locked{opacity:.55}
+  .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--muted);margin-bottom:7px;letter-spacing:.02em}
+  .unit{font-family:var(--mono);font-size:11px;color:#9aa7ae}
+
+  input[type=number],select{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    background:#fffdf9;color:var(--ink);font-size:14.5px;font-family:var(--mono);
+    font-variant-numeric:tabular-nums;transition:.15s;
+  }
+  input[type=number]{appearance:textfield}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input:focus,select:focus{outline:none;border-color:#8fb9b5;background:#fff;box-shadow:0 0 0 3px rgba(13,92,99,.12)}
+  input:disabled{background:#f2efe8;color:#9aa7ae;cursor:not-allowed}
+  select{cursor:pointer}
+
+  .row{display:flex;gap:8px;align-items:center}
+  .row input{flex:1}
+  .unit-suffix{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:52px;text-align:right}
+
+  .hint{font-size:11.5px;color:#9aa7ae;line-height:1.6;margin:14px 2px 0}
+
+  /* ---------- results ---------- */
+  .results{overflow:hidden}
+  .hero{padding:26px 28px 24px;background:linear-gradient(180deg,#fbfaf6,#fffdf8);border-bottom:1px solid var(--line)}
+  .hero-label{font-size:11.5px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+  .hero-row{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .hero-value{
+    font-family:var(--mono);font-size:clamp(34px,6vw,50px);font-weight:600;line-height:1;
+    letter-spacing:-.02em;color:var(--accent);
+  }
+  .hero-side{display:flex;flex-direction:column;gap:7px;padding-bottom:5px}
+  .hero-hint{font-size:12px;color:var(--muted)}
+  .hero-sub{font-size:13.5px;color:var(--muted);margin-top:12px;line-height:1.6}
+
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:.05em}
+  .badge.laminar{background:#e4eff8;color:#1e5b8a}
+  .badge.turbulent{background:#e2f1ee;color:var(--accent)}
+  .badge.transition{background:#fbefd9;color:#9a6a12}
+  .badge.invalid{background:#fbe4e0;color:#a3311c}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+  @media (max-width:640px){ .stats{grid-template-columns:repeat(2,1fr)} }
+  .stat{background:var(--card);padding:14px 18px}
+  .stat span{display:block;font-size:11.5px;color:var(--muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stat b{font-family:var(--mono);font-size:15px;font-weight:600;white-space:nowrap}
+  .stat i{font-style:normal;font-family:inherit;font-size:11px;color:var(--muted);margin-left:3px}
+
+  .notes{padding:16px 28px 22px;font-size:12.5px;color:var(--muted);line-height:1.8;border-top:1px solid var(--line);background:#fbfaf6}
+  .notes b{color:var(--ink);font-weight:600}
+  .notes .warn{color:#9a6a12}
+  .notes p{margin:0 0 6px}
+  .notes p:last-child{margin-bottom:0}
+
+  .err{padding:22px 28px;color:#a3311c;font-size:14px}
+
+  /* inverse cards */
+  .inv-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:24px 28px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fbfaf6,#fffdf8)}
+  .inv-target{font-size:13px;color:var(--muted)}
+  .inv-target b{color:var(--ink);font-size:15px}
+  .sol-list{display:flex;flex-direction:column}
+  .sol-card{padding:20px 28px;border-bottom:1px solid var(--line-soft)}
+  .sol-card:last-child{border-bottom:none}
+  .sol-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+  .sol-re{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .sol-re b{color:var(--ink);font-weight:600}
+  .sol-main{display:flex;align-items:baseline;gap:8px;margin-bottom:14px}
+  .sol-value{font-family:var(--mono);font-size:clamp(28px,5vw,38px);font-weight:600;color:var(--accent);line-height:1}
+  .sol-unit{font-size:13px;color:var(--muted);font-family:var(--mono)}
+  .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media (max-width:700px){ .mini{grid-template-columns:repeat(2,1fr)} }
+  .mini div{background:#faf8f2;border:1px solid var(--line-soft);border-radius:9px;padding:8px 11px}
+  .mini span{display:block;font-size:10.5px;color:var(--muted);margin-bottom:3px}
+  .mini b{font-family:var(--mono);font-size:12.5px;font-weight:600}
+
+  .note-line{padding:12px 28px;font-size:12.5px;color:#9a6a12;background:#fdf6e9;border-bottom:1px solid var(--line-soft)}
+
+  /* ---------- chart ---------- */
+  .chart-card{padding:20px 22px 14px}
+  .chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .chart-title{font-family:var(--serif);font-size:16px;font-weight:600}
+  .chart-legend{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--ember);display:inline-block;box-shadow:0 0 0 3px rgba(194,65,12,.15)}
+  .chart-wrap{width:100%}
+  .chart{width:100%;height:auto;display:block}
+  .chart text{font-family:var(--mono);fill:#819198;font-size:10.5px}
+  .chart .tick{font-size:10px}
+  .chart .axis-title{fill:#51626b;font-size:11.5px;letter-spacing:.12em;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+  .chart .rrlab{font-size:8.6px;fill:#94a1a7}
+  .chart .band{font-size:9px;fill:#b08a4a;letter-spacing:.08em}
+
+  footer{max-width:1240px;margin:34px auto 0;padding:0 4px;font-size:12px;color:#9aa7ae;line-height:1.8}
+  footer code{font-family:var(--mono);color:#7c8a92}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <span class="eyebrow">Fluid Mechanics · Darcy–Weisbach</span>
+    <h1>老实查表，很枯燥吧</h1>
+    <p class="sub">
+      输入管流条件，沿穆迪图族曲线读取达西摩擦因子；亦可由已知的 λ 反推流速、管径、黏度与粗糙度。
+      <span class="poetic">一条曲线，一段管流，皆在这张图上静静交汇。</span>
+    </p>
+  </header>
+
+  <main class="layout">
+    <!-- ============ 输入 ============ -->
+    <section class="panel inputs">
+      <div class="seg" id="modeSeg">
+        <label><input type="radio" name="mode" value="forward" checked><span>正算 · 求摩擦因子</span></label>
+        <label><input type="radio" name="mode" value="inverse"><span>反算 · 已知 λ</span></label>
+      </div>
+
+      <div class="field">
+        <label class="lab">介质预设 <span class="unit">可选</span></label>
+        <select id="preset">
+          <option value="">自定义</option>
+          <option value="water20">水 · 20 ℃</option>
+          <option value="water50">水 · 50 ℃</option>
+          <option value="air20">空气 · 20 ℃</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="lab">密度 ρ <span class="unit">kg/m³</span></label>
+        <input id="rho" type="number" step="any" inputmode="decimal" value="998.2">
+      </div>
+
+      <div class="field" id="fVisc">
+        <div class="lab">黏度</div>
+        <div class="seg" id="viscSeg" style="margin-bottom:9px">
+          <label><input type="radio" name="viscMode" value="mu" checked><span>动力黏度 μ</span></label>
+          <label><input type="radio" name="viscMode" value="nu"><span>运动黏度 ν</span></label>
+        </div>
+        <div class="row">
+          <input id="visc" type="number" step="any" inputmode="decimal" value="1.002">
+          <span class="unit-suffix" id="viscUnit">mPa·s</span>
+        </div>
+      </div>
+
+      <div class="field" id="fD">
+        <label class="lab">管径 D <span class="unit">mm</span></label>
+        <input id="D" type="number" step="any" inputmode="decimal" value="50">
+      </div>
+
+      <div class="field" id="fV">
+        <div class="lab">流速 / 流量</div>
+        <div class="seg" style="margin-bottom:9px">
+          <label><input type="radio" name="velMode" value="v" checked><span>流速 V</span></label>
+          <label><input type="radio" name="velMode" value="q"><span>流量 Q</span></label>
+        </div>
+        <div class="row">
+          <input id="V" type="number" step="any" inputmode="decimal" value="2">
+          <span class="unit-suffix" id="velUnit">m/s</span>
+        </div>
+      </div>
+
+      <div class="field" id="fEps">
+        <label class="lab">绝对粗糙度 ε <span class="unit">mm</span></label>
+        <select id="mat" style="margin-bottom:8px">
+          <option value="">自定义</option>
+          <option value="0.0015">光滑管 · 玻璃 / 拉制金属</option>
+          <option value="0.045">商用钢 · 焊接钢</option>
+          <option value="0.15">镀锌铁</option>
+          <option value="0.26">铸铁</option>
+          <option value="0.3">混凝土</option>
+          <option value="0.9">铆接钢</option>
+        </select>
+        <input id="eps" type="number" step="any" inputmode="decimal" value="0.045">
+      </div>
+
+      <div class="field" id="fTargetField">
+        <label class="lab">达西摩擦因子 λ <span class="unit" id="fHint">正算时自动得出</span></label>
+        <input id="fTarget" type="number" step="any" inputmode="decimal" value="0.0300" disabled>
+      </div>
+
+      <div class="field" id="targetField" hidden>
+        <label class="lab">求解目标</label>
+        <select id="target">
+          <option value="V">流速 V</option>
+          <option value="D">管径 D</option>
+          <option value="visc">黏度 μ / ν</option>
+          <option value="eps">绝对粗糙度 ε</option>
+        </select>
+      </div>
+
+      <p class="hint">
+        λ 为达西（Darcy–Weisbach）摩擦因子，约为范宁因子的 4 倍。层流取 64/Re，湍流按 Colebrook–White 方程迭代求解。
+      </p>
+    </section>
+
+    <!-- ============ 结果 ============ -->
+    <div class="right">
+      <section class="panel results" id="result" aria-live="polite"></section>
+      <section class="panel chart-card">
+        <div class="chart-head">
+          <div class="chart-title">穆迪图 · Moody Diagram</div>
+          <div class="chart-legend"><span class="dot"></span>当前工况</div>
+        </div>
+        <div class="chart-wrap" id="chart"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    经验公式：湍流区 1/√λ = −2 lg( ε/(3.7D) + 2.51/(Re√λ) )；过渡区（2300&lt;Re&lt;4000）按层流与湍流端值平滑插值，仅作参考。粗糙度取值随管材与工况而异，请以实测为准。
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const G = 9.80665;
+
+  /* ================= 数值核心 ================= */
+
+  // Colebrook–White 迭代求解湍流摩擦因子
+  function colebrook(Re, rr){
+    const A = rr / 3.7;
+    let f = 0.25 / Math.pow(Math.log10(A + 5.74 / Math.pow(Re, 0.9)), 2);
+    if (!isFinite(f) || f <= 0) f = 0.03;
+    for (let i = 0; i < 200; i++){
+      const s = 2.51 / (Re * Math.sqrt(f));
+      const inv = -2 * Math.log10(A + s);
+      if (!isFinite(inv) || inv === 0) break;
+      const nf = 1 / (inv * inv);
+      if (!isFinite(nf)) break;
+      if (Math.abs(nf - f) < 1e-14) return nf;
+      f = nf;
+    }
+    return f;
+  }
+
+  // 由 f 与相对粗糙度反解湍流雷诺数
+  function colebrookRe(f, rr){
+    if (!(f > 0)) return null;
+    const X = Math.pow(10, -1 / (2 * Math.sqrt(f)));
+    const denom = X - rr / 3.7;
+    if (denom <= 0) return null;
+    const Re = 2.51 / (Math.sqrt(f) * denom);
+    return isFinite(Re) ? Re : null;
+  }
+
+  // 统一的正向求解：给定 Re 与相对粗糙度得 f
+  function frictionFactor(Re, rr){
+    if (!(Re > 0)) return { f: NaN, regime: 'invalid' };
+    if (Re < 2300) return { f: 64 / Re, regime: 'laminar' };
+    if (Re <= 4000){
+      const fL = 64 / 2300;
+      const fT = colebrook(4000, rr);
+      let t = (Re - 2300) / 1700;
+      t = t * t * (3 - 2 * t);
+      return { f: fL + (fT - fL) * t, regime: 'transition' };
+    }
+    return { f: colebrook(Re, rr), regime: 'turbulent' };
+  }
+
+  function forward(inp){
+    const nu = inp.mu / inp.rho;
+    const Re = inp.V * inp.D / nu;
+    const rr = inp.eps / inp.D;
+    const res = frictionFactor(Re, rr);
+    return fullState({ Re, rr, f: res.f, regime: res.regime, nu, D: inp.D, V: inp.V, eps: inp.eps, rho: inp.rho });
+  }
+
+  function fullState(o){
+    const hf = o.f / o.D * o.V * o.V / (2 * G);   // m / m
+    return Object.assign({}, o, {
+      Q: o.V * Math.PI * o.D * o.D / 4,
+      hfPerL: hf,
+      dpPerL: hf * o.rho * G,
+      tau: o.f / 8 * o.rho * o.V * o.V
+    });
+  }
+
+  /* ================= 反算 ================= */
+
+  function solveInverse(inp, f, target){
+    const { rho, D, V, eps } = inp;
+    const nuIn = inp.mu / rho;
+    const qMode = (inp.velMode === 'q' && inp.Q > 0);
+    const sols = [];
+    const notes = [];
+
+    // —— 层流分支：Re = 64/f ——
+    const ReL = 64 / f;
+    if (ReL <= 2300 + 1e-6){
+      if (target === 'eps'){
+        notes.push('层流时摩擦因子只与 Re 有关，粗糙度不影响 λ，ε 无法由 λ 唯一确定。');
+      } else {
+        const s = { branch: 'laminar', Re: ReL, D: D, V: V, nu: nuIn, eps: eps, rho: rho, f: f };
+        if (target === 'V') s.V = ReL * nuIn / D;
+        else if (target === 'D'){
+          if (qMode){
+            s.D = 4 * inp.Q / (Math.PI * nuIn * ReL);
+            s.V = 4 * inp.Q / (Math.PI * s.D * s.D);
+          } else {
+            s.D = ReL * nuIn / V;
+          }
+        }
+        else if (target === 'visc') s.nu = V * D / ReL;
+        sols.push(fullState(s));
+      }
+    }
+
+    // —— 湍流分支 ——
+    if (target === 'eps'){
+      const Re = V * D / nuIn;
+      if (Re >= 2300){
+        const X = Math.pow(10, -1 / (2 * Math.sqrt(f)));
+        const rr = 3.7 * (X - 2.51 / (Re * Math.sqrt(f)));
+        if (rr > 0){
+          sols.push(fullState({ branch: 'turbulent', Re: Re, D: D, V: V, nu: nuIn, eps: rr * D, rho: rho, f: f, rrOverride: rr }));
+        } else {
+          notes.push('该 f 小于当前 Re 下光滑管所能达到的最小值，对应粗糙度不存在。');
+        }
+      }
+    } else if (target === 'V' || target === 'visc'){
+      const rr = eps / D;
+      const ReT = colebrookRe(f, rr);
+      if (ReT && ReT >= 4000){
+        const s = { branch: 'turbulent', Re: ReT, D: D, V: V, nu: nuIn, eps: eps, rho: rho, f: f };
+        if (target === 'V') s.V = ReT * nuIn / D;
+        else s.nu = V * D / ReT;
+        sols.push(fullState(s));
+      }
+    } else if (target === 'D'){
+      // 单调递减，扫描找区间后二分
+      const reOf = qMode
+        ? function(Dt){ return 4 * inp.Q / (Math.PI * Dt * nuIn); }
+        : function(Dt){ return V * Dt / nuIn; };
+      const g = function(Dt){ return colebrook(reOf(Dt), eps / Dt) - f; };
+      const dmin = 1e-4, dmax = 5;
+      const N = 1500;
+      let prev = null, bracket = null;
+      for (let i = 0; i <= N; i++){
+        const Dt = dmin * Math.pow(dmax / dmin, i / N);
+        const Re = reOf(Dt);
+        if (Re < 4000){ prev = null; continue; }
+        const gv = g(Dt);
+        if (prev && prev.g * gv <= 0){ bracket = [prev.D, Dt]; break; }
+        prev = { D: Dt, g: gv };
+      }
+      if (bracket){
+        let a = bracket[0], b = bracket[1];
+        for (let k = 0; k < 90; k++){
+          const m = (a + b) / 2;
+          if (g(a) * g(m) <= 0) b = m; else a = m;
+        }
+        const Ds = (a + b) / 2;
+        const Vs = qMode ? 4 * inp.Q / (Math.PI * Ds * Ds) : V;
+        sols.push(fullState({ branch: 'turbulent', Re: reOf(Ds), D: Ds, V: Vs, nu: nuIn, eps: eps, rho: rho, f: f }));
+      }
+    }
+
+    return { sols: sols, notes: notes };
+  }
+
+  /* ================= 格式化 ================= */
+
+  function sup(n){
+    const map = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'' };
+    return String(n).split('').map(function(c){ return map[c] || c; }).join('');
+  }
+
+  function fmtH(x, sig){
+    sig = sig || 4;
+    if (x == null || !isFinite(x)) return '—';
+    if (x === 0) return '0';
+    const a = Math.abs(x);
+    if (a >= 1e5 || a < 1e-3){
+      const e = Math.floor(Math.log10(a));
+      const m = (x / Math.pow(10, e)).toFixed(sig - 1);
+      return m + '×10<sup>' + e + '</sup>';
+    }
+    if (a >= 1000) return x.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    var p = Number(x.toPrecision(sig));
+    return String(p);
+  }
+
+  function fmtRe(Re){
+    if (!isFinite(Re)) return '—';
+    if (Re < 1e4) return Re.toFixed(0);
+    const e = Math.floor(Math.log10(Math.abs(Re)));
+    const m = (Re / Math.pow(10, e)).toFixed(2);
+    return m + '×10<sup>' + e + '</sup>';
+  }
+
+  function rrText(rr){
+    if (!(rr > 0)) return '0（光滑）';
+    if (rr >= 1e-3) return String(Number(rr.toPrecision(3)));
+    const e = Math.floor(Math.log10(rr));
+    const m = Number((rr / Math.pow(10, e)).toPrecision(2));
+    return (m === 1 ? '' : m) + '×10' + sup(e);
+  }
+
+  function rrLabel(rr){
+    if (rr === 0) return '光滑';
+    if (rr >= 1e-3) return String(Number(rr.toFixed(4)));
+    const e = Math.floor(Math.log10(rr));
+    const m = Number((rr / Math.pow(10, e)).toPrecision(2));
+    return (m === 1 ? '' : m) + '·10' + sup(e);
+  }
+
+  function regimeBadge(regime){
+    if (regime === 'laminar') return '<span class="badge laminar">层流</span>';
+    if (regime === 'transition') return '<span class="badge transition">过渡区</span>';
+    if (regime === 'turbulent') return '<span class="badge turbulent">湍流</span>';
+    return '<span class="badge invalid">无解</span>';
+  }
+
+  function regimeName(regime){
+    return regime === 'laminar' ? '层流' : regime === 'transition' ? '过渡区' : regime === 'turbulent' ? '湍流' : '—';
+  }
+
+  /* ================= 穆迪图 ================= */
+
+  const CH = { W: 760, H: 470, ml: 64, mr: 56, mt: 24, mb: 60 };
+  const PW = CH.W - CH.ml - CH.mr;
+  const PH = CH.H - CH.mt - CH.mb;
+  const ReLo = 600, ReHi = 1e9, fLo = 0.004, fHi = 0.15;
+
+  function clamp(v, a, b){ return v < a ? a : v > b ? b : v; }
+  function xOf(Re){ return CH.ml + (Math.log10(clamp(Re, ReLo, ReHi)) - Math.log10(ReLo)) / (Math.log10(ReHi) - Math.log10(ReLo)) * PW; }
+  function yOf(f){ return CH.mt + (Math.log10(fHi) - Math.log10(clamp(f, fLo, fHi))) / (Math.log10(fHi) - Math.log10(fLo)) * PH; }
+
+  function buildChart(points, highlightRR){
+    let s = '<svg viewBox="0 0 ' + CH.W + ' ' + CH.H + '" class="chart" role="img" aria-label="穆迪图">';
+    s += '<defs><radialGradient id="glow">'
+       + '<stop offset="0%" stop-color="#c2410c" stop-opacity=".38"/>'
+       + '<stop offset="100%" stop-color="#c2410c" stop-opacity="0"/>'
+       + '</radialGradient>'
+       + '<clipPath id="plotclip"><rect x="' + CH.ml + '" y="' + CH.mt + '" width="' + PW + '" height="' + PH + '"/></clipPath></defs>';
+
+    s += '<rect x="' + CH.ml + '" y="' + CH.mt + '" width="' + PW + '" height="' + PH + '" fill="#fffdf8" stroke="#e2dccf"/>';
+
+    // 竖向网格
+    [1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9].forEach(function(r){
+      const x = xOf(r).toFixed(1);
+      s += '<line x1="' + x + '" y1="' + CH.mt + '" x2="' + x + '" y2="' + (CH.mt + PH) + '" stroke="#eee8dc"/>';
+      s += '<text x="' + x + '" y="' + (CH.mt + PH + 17) + '" text-anchor="middle" class="tick">10<tspan baseline-shift="super" font-size="7.5">' + Math.log10(r) + '</tspan></text>';
+    });
+    // 横向网格
+    [0.005, 0.008, 0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.1, 0.15].forEach(function(f){
+      const y = yOf(f).toFixed(1);
+      s += '<line x1="' + CH.ml + '" y1="' + y + '" x2="' + (CH.ml + PW) + '" y2="' + y + '" stroke="#eee8dc"/>';
+      s += '<text x="' + (CH.ml - 9) + '" y="' + (Number(y) + 3.5).toFixed(1) + '" text-anchor="end" class="tick">' + f + '</text>';
+    });
+
+    // 过渡区
+    const xT1 = xOf(2300), xT2 = xOf(4000);
+    s += '<rect x="' + xT1.toFixed(1) + '" y="' + CH.mt + '" width="' + (xT2 - xT1).toFixed(1) + '" height="' + PH + '" fill="#f7edda" opacity=".75"/>';
+    s += '<text x="' + ((xT1 + xT2) / 2).toFixed(1) + '" y="' + (CH.mt + 14) + '" text-anchor="middle" class="band">过渡区</text>';
+
+    s += '<g clip-path="url(#plotclip)">';
+
+    // 层流线
+    let dl = '';
+    for (let i = 0; i <= 40; i++){
+      const Re = 600 * Math.pow(2300 / 600, i / 40);
+      dl += (i ? 'L' : 'M') + xOf(Re).toFixed(1) + ' ' + yOf(64 / Re).toFixed(1) + ' ';
+    }
+    s += '<path d="' + dl + '" fill="none" stroke="#2f4a57" stroke-width="1.7"/>';
+    s += '<text x="' + xOf(760).toFixed(1) + '" y="' + (yOf(64 / 760) - 9).toFixed(1) + '" class="rrlab">层流 · 64/Re</text>';
+
+    // 湍流族曲线
+    function curve(rr, color, width){
+      let d = '';
+      const N = 90, a = 4000, b = 1e9;
+      for (let i = 0; i <= N; i++){
+        const Re = a * Math.pow(b / a, i / N);
+        d += (i ? 'L' : 'M') + xOf(Re).toFixed(1) + ' ' + yOf(colebrook(Re, rr)).toFixed(1) + ' ';
+      }
+      s += '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="' + width + '"/>';
+    }
+    const rrs = [0, 5e-5, 1e-4, 2e-4, 5e-4, 1e-3, 2e-3, 5e-3, 1e-2, 5e-2];
+    rrs.forEach(function(rr, i){ curve(rr, i === 0 ? '#3c5a66' : '#c2cdcf', i === 0 ? 1.5 : 1); });
+
+    // 当前相对粗糙度高亮
+    if (highlightRR != null && highlightRR >= 0){
+      curve(clamp(highlightRR, 0, 0.2), '#c2410c', 2.3);
+    }
+
+    s += '</g>';
+
+    // 曲线标注（坐标区右侧，与曲线末端对齐并自动错开）
+    const labels = rrs.map(function(rr){ return { rr: rr, y: yOf(colebrook(1e9, rr)), x: CH.ml + PW + 6 }; });
+    labels.sort(function(a, b){ return a.y - b.y; });
+    let lastY = -99;
+    labels.forEach(function(o){ if (o.y - lastY < 11) o.y = lastY + 11; lastY = o.y; });
+    labels.forEach(function(o){
+      const ly = Math.min(o.y, CH.mt + PH - 4);
+      s += '<text x="' + o.x.toFixed(1) + '" y="' + (ly + 3).toFixed(1) + '" class="rrlab">' + rrLabel(o.rr) + '</text>';
+    });
+
+    // 工况点
+    if (points && points.length){
+      const p = points[0];
+      const px = xOf(p.Re), py = yOf(p.f);
+      s += '<line x1="' + CH.ml + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + py.toFixed(1) + '" stroke="#c2410c" stroke-dasharray="3 4" opacity=".5"/>';
+      s += '<line x1="' + px.toFixed(1) + '" y1="' + py.toFixed(1) + '" x2="' + px.toFixed(1) + '" y2="' + (CH.mt + PH) + '" stroke="#c2410c" stroke-dasharray="3 4" opacity=".5"/>';
+      points.forEach(function(pt, i){
+        const x = xOf(pt.Re), y = yOf(pt.f);
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (i === 0 ? 15 : 11) + '" fill="url(#glow)"/>';
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (i === 0 ? 4.8 : 4) + '" fill="' + (i === 0 ? '#c2410c' : '#0d5c63') + '" stroke="#fffdf8" stroke-width="1.6"/>';
+      });
+    }
+
+    // 轴标题
+    s += '<text x="' + (CH.ml + PW / 2) + '" y="' + (CH.H - 16) + '" text-anchor="middle" class="axis-title">雷诺数 Re</text>';
+    s += '<text x="16" y="' + (CH.mt + PH / 2) + '" text-anchor="middle" class="axis-title" transform="rotate(-90 16 ' + (CH.mt + PH / 2) + ')">摩擦因子 λ</text>';
+
+    s += '</svg>';
+    return s;
+  }
+
+  /* ================= 渲染 ================= */
+
+  function renderForward(st){
+    let html = '<div class="hero">'
+      + '<div class="hero-label">达西摩擦因子 λ</div>'
+      + '<div class="hero-row">'
+      +   '<div class="hero-value">' + st.f.toFixed(4) + '</div>'
+      +   '<div class="hero-side">' + regimeBadge(st.regime)
+      +     '<span class="hero-hint">' + (st.regime === 'laminar' ? '层流 · λ = 64/Re' : st.regime === 'transition' ? '过渡区 · 经验插值' : '湍流 · Colebrook–White') + '</span>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+
+    html += '<div class="stats">'
+      + stat('雷诺数 Re', fmtRe(st.Re))
+      + stat('流量 Q', fmtH(st.Q, 4), 'm³/s')
+      + stat('相对粗糙度 ε/D', rrText(st.rr))
+      + stat('运动黏度 ν', fmtH(st.nu * 1e6, 3), 'mm²/s')
+      + stat('沿程水头损失 h<sub>f</sub>/L', fmtH(st.hfPerL, 3), 'm/m')
+      + stat('压力梯度 Δp/L', fmtH(st.dpPerL, 3), 'Pa/m')
+      + '</div>';
+
+    html += '<div class="notes">';
+    if (getVelMode() === 'q') html += '<p>已按输入流量换算：流速 V = ' + fmtH(st.V, 4) + ' m/s。</p>';
+    if (st.regime === 'laminar') html += '<p class="warn">层流区（Re &lt; 2300）：λ 仅由雷诺数决定，粗糙度不参与计算。</p>';
+    if (st.regime === 'transition') html += '<p class="warn">过渡区（2300 &lt; Re &lt; 4000）：流动不稳定，λ 在层流值与湍流值之间平滑插值，结果仅供参考。</p>';
+    html += '<p>壁面切应力 τ<sub>w</sub> = ' + fmtH(st.tau, 3) + ' Pa；相对粗糙度 ε/D = ' + rrText(st.rr) + '；λ 约为范宁摩擦因子的 4 倍。</p>';
+    html += '</div>';
+
+    return html;
+  }
+
+  function stat(label, value, unit){
+    return '<div class="stat"><span>' + label + '</span><b>' + value + (unit ? '<i>' + unit + '</i>' : '') + '</b></div>';
+  }
+
+  function targetLabel(target, viscMode, velMode){
+    if (target === 'V') return velMode === 'q' ? '流量 Q' : '流速 V';
+    if (target === 'D') return '管径 D';
+    if (target === 'eps') return '绝对粗糙度 ε';
+    return viscMode === 'mu' ? '动力黏度 μ' : '运动黏度 ν';
+  }
+
+  function solutionValue(s, target, meta){
+    if (target === 'V') return meta.velMode === 'q'
+      ? { v: fmtH(s.Q, 4), u: 'm³/s', input: s.Q }
+      : { v: fmtH(s.V, 4), u: 'm/s', input: s.V };
+    if (target === 'D') return { v: fmtH(s.D * 1000, 4), u: 'mm', input: s.D * 1000 };
+    if (target === 'eps') return { v: fmtH(s.eps * 1000, 3), u: 'mm', input: s.eps * 1000 };
+    if (meta.viscMode === 'mu') return { v: fmtH(s.nu * meta.rho * 1000, 4), u: 'mPa·s', input: s.nu * meta.rho * 1000 };
+    return { v: fmtH(s.nu * 1e6, 4), u: 'mm²/s', input: s.nu * 1e6 };
+  }
+
+  function renderInverse(res, meta){
+    const f = meta.f, target = meta.target;
+    let html = '<div class="inv-head">'
+      + '<div><div class="hero-label">已知达西摩擦因子 λ</div>'
+      + '<div class="hero-value" style="font-size:clamp(30px,4.6vw,42px)">' + f.toFixed(4) + '</div></div>'
+      + '<div class="inv-target">求解 <b>' + targetLabel(target, meta.viscMode, meta.velMode) + '</b></div>'
+      + '</div>';
+
+    if (res.notes.length) html += res.notes.map(function(n){ return '<div class="note-line">' + n + '</div>'; }).join('');
+
+    if (!res.sols.length){
+      html += '<div class="err">在给定 λ 下未找到物理上可行的解。请检查其余输入，或调整摩擦因子。</div>';
+      return html;
+    }
+
+    if (res.sols.length > 1) html += '<div class="note-line">同一 f 同时对应层流与湍流两组解，按实际流态取用。</div>';
+
+    html += '<div class="sol-list">';
+    res.sols.forEach(function(s){
+      const isLam = s.branch === 'laminar';
+      const sv = solutionValue(s, target, meta);
+      const counterpart = (target === 'V' && meta.velMode === 'q')
+        ? '<div><span>流速 V</span><b>' + fmtH(s.V, 3) + ' m/s</b></div>'
+        : '<div><span>流量 Q</span><b>' + fmtH(s.Q, 4) + ' m³/s</b></div>';
+      html += '<div class="sol-card">'
+        + '<div class="sol-top">'
+        +   '<span class="badge ' + (isLam ? 'laminar' : 'turbulent') + '">' + (isLam ? '层流解' : '湍流解') + '</span>'
+        +   '<span class="sol-re">雷诺数 Re = <b>' + fmtRe(s.Re) + '</b></span>'
+        + '</div>'
+        + '<div class="sol-main"><span class="sol-value">' + sv.v + '</span><span class="sol-unit">' + sv.u + '</span></div>'
+        + '<div class="mini">'
+        +   counterpart
+        +   '<div><span>相对粗糙度 ε/D</span><b>' + rrText(s.eps / s.D) + '</b></div>'
+        +   (target === 'V'
+              ? '<div><span>管径 D</span><b>' + fmtH(s.D * 1000, 3) + ' mm</b></div>'
+              : '<div><span>流速 V</span><b>' + fmtH(s.V, 3) + ' m/s</b></div>')
+        +   '<div><span>沿程水头损失 h<sub>f</sub>/L</span><b>' + fmtH(s.hfPerL, 3) + ' m/m</b></div>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  /* ================= 交互 ================= */
+
+  function el(id){ return document.getElementById(id); }
+  function v(id){ return el(id).value; }
+  function n(id){ return parseFloat(el(id).value); }
+
+  function getMode(){ return document.querySelector('input[name="mode"]:checked').value; }
+  function getViscMode(){ return document.querySelector('input[name="viscMode"]:checked').value; }
+  function getVelMode(){ return document.querySelector('input[name="velMode"]:checked').value; }
+
+  function currentTarget(){ return el('target').value; }
+
+  function syncUI(){
+    const mode = getMode();
+    const target = currentTarget();
+
+    el('targetField').hidden = (mode !== 'inverse');
+
+    const forwardMode = (mode !== 'inverse');
+    el('fTarget').disabled = forwardMode;
+    el('fTargetField').classList.toggle('locked', forwardMode);
+    el('fHint').textContent = forwardMode ? '正算时自动得出' : '输入已知值';
+
+    const map = { V: 'fV', D: 'fD', eps: 'fEps', visc: 'fVisc' };
+    const inputs = { V: 'V', D: 'D', eps: 'eps', visc: 'visc' };
+
+    Object.keys(map).forEach(function(k){
+      const wrap = el(map[k]);
+      const input = el(inputs[k]);
+      const locked = (mode === 'inverse' && target === k);
+      wrap.classList.toggle('locked', locked);
+      input.disabled = locked;
+    });
+
+    // 黏度输入在反算目标不是黏度时，仍受 viscMode 显示单位
+    el('viscUnit').textContent = getViscMode() === 'mu' ? 'mPa·s' : 'mm²/s';
+
+    // 流速 / 流量 输入单位与求解目标文案
+    const velMode = getVelMode();
+    el('velUnit').textContent = velMode === 'q' ? 'm³/s' : 'm/s';
+    const optV = el('target').querySelector('option[value="V"]');
+    if (optV) optV.textContent = velMode === 'q' ? '流量 Q' : '流速 V';
+  }
+
+  function gather(){
+    const viscMode = getViscMode();
+    const velMode = getVelMode();
+    const rho = n('rho');
+    const viscVal = n('visc');
+    const D = n('D') / 1000;
+    const velVal = n('V');
+    const eps = n('eps') / 1000;
+
+    if (!(rho > 0)) return { error: '密度需为正数。' };
+    if (!(viscVal > 0)) return { error: '黏度需为正数。' };
+    if (!(D > 0)) return { error: '管径需为正数。' };
+    if (!(eps >= 0)) return { error: '粗糙度不能为负值。' };
+    if (!(velVal >= 0)) return { error: (velMode === 'q' ? '流量' : '流速') + '不能为负值。' };
+
+    const mu = viscMode === 'mu' ? viscVal * 1e-3 : viscVal * 1e-6 * rho;
+    const area = Math.PI * D * D / 4;
+    const Q = velMode === 'q' ? velVal : velVal * area;
+    const V = velMode === 'q' ? velVal / area : velVal;
+
+    return { rho: rho, mu: mu, D: D, V: V, eps: eps, viscMode: viscMode, viscVal: viscVal, velMode: velMode, Q: Q };
+  }
+
+  let lastChartPoints = [];
+
+  function compute(){
+    syncUI();
+
+    const inp = gather();
+    if (inp.error){
+      el('result').innerHTML = '<div class="hero"><div class="hero-label">请检查输入</div><div class="err">' + inp.error + '</div></div>';
+      return;
+    }
+
+    const mode = getMode();
+
+    if (mode === 'forward'){
+      if (inp.V === 0){
+        const noun = inp.velMode === 'q' ? '流量' : '流速';
+        el('result').innerHTML = '<div class="hero"><div class="hero-label">请检查输入</div><div class="err">' + noun + '为 0 时不存在流动，摩擦因子无定义。</div></div>';
+        return;
+      }
+      const st = forward(inp);
+      el('fTarget').value = st.f.toFixed(6);
+      el('result').innerHTML = renderForward(st);
+
+      const pts = [{ Re: st.Re, f: st.f }];
+      lastChartPoints = pts;
+      el('chart').innerHTML = buildChart(pts, st.regime === 'turbulent' ? st.rr : null);
+    } else {
+      const f = n('fTarget');
+      if (!(f > 0) || f > 0.5){
+        el('result').innerHTML = '<div class="hero"><div class="hero-label">请检查输入</div><div class="err">摩擦因子 λ 应在 0 与 0.5 之间。</div></div>';
+        return;
+      }
+      const target = currentTarget();
+      const res = solveInverse(inp, f, target);
+      const meta = { f: f, target: target, viscMode: inp.viscMode, rho: inp.rho, velMode: inp.velMode };
+      el('result').innerHTML = renderInverse(res, meta);
+
+      // 反填输入
+      if (res.sols.length){
+        const sv = solutionValue(res.sols[0], target, meta);
+        const targetInputId = target === 'visc' ? 'visc' : target;
+        el(targetInputId).value = Number(sv.input.toPrecision(6));
+      }
+
+      const pts = res.sols.map(function(s){ return { Re: s.Re, f: s.f }; });
+      lastChartPoints = pts;
+      const hl = res.sols.length ? res.sols[0].eps / res.sols[0].D : null;
+      el('chart').innerHTML = buildChart(pts, hl);
+    }
+  }
+
+  /* ---------- 事件 ---------- */
+
+  const PRESETS = {
+    water20: { rho: 998.2, mu: 1.002e-3 },
+    water50: { rho: 988.0, mu: 0.547e-3 },
+    air20:   { rho: 1.204, mu: 1.825e-5 }
+  };
+
+  el('preset').addEventListener('change', function(e){
+    const p = PRESETS[e.target.value];
+    if (!p) return;
+    el('rho').value = p.rho;
+    document.querySelector('input[name="viscMode"][value="mu"]').checked = true;
+    el('visc').value = Number((p.mu * 1000).toPrecision(6));
+    el('viscUnit').textContent = 'mPa·s';
+    compute();
+  });
+
+  document.querySelectorAll('input[name="mode"]').forEach(function(r){
+    r.addEventListener('change', function(){ syncUI(); compute(); });
+  });
+  document.querySelectorAll('input[name="viscMode"]').forEach(function(r){
+    r.addEventListener('change', function(){ syncUI(); compute(); });
+  });
+  document.querySelectorAll('input[name="velMode"]').forEach(function(r){
+    r.addEventListener('change', function(){
+      // 切换时按当前管径换算，保持同一物理流量
+      const area = Math.PI * Math.pow(n('D') / 1000, 2) / 4;
+      const cur = n('V');
+      if (area > 0 && isFinite(cur)){
+        el('V').value = Number((getVelMode() === 'q' ? cur * area : cur / area).toPrecision(6));
+      }
+      syncUI();
+      compute();
+    });
+  });
+  el('target').addEventListener('change', function(){ syncUI(); compute(); });
+  el('mat').addEventListener('change', function(e){
+    if (e.target.value !== '') el('eps').value = e.target.value;
+    compute();
+  });
+
+  ['rho', 'visc', 'D', 'V', 'eps', 'fTarget'].forEach(function(id){
+    el(id).addEventListener('input', compute);
+  });
+
+  // 初始渲染
+  syncUI();
+  compute();
+})();
+</script>
+</body>
+</html>
